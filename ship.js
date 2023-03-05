@@ -1,5 +1,6 @@
 background(0, 0, 30);
 
+push();
 //signal at top
 strokeWeight(5);
 stroke(255, 255, 255);
@@ -54,3 +55,4 @@ ellipse(25, 490, 15);
 
 fill(250, 250, 250);
 ellipse(175, 490, 15);
+pop();
