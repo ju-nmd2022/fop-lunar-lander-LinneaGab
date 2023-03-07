@@ -159,6 +159,38 @@ function drawPlanets(offsetY = 0) {
   pop();
 }
 
+function drawFire(offsetY = 0) {
+  let x = 0;
+  let y = offsetY - 165;
+  //fire
+  push();
+  strokeWeight(0);
+  fill(255, 150, 90);
+  ellipse(x + 325, y + 500, 90);
+  triangle(x + 370, y + 505, x + 330, y + 530, x + 355, y + 570);
+  triangle(x + 370, y + 505, x + 295, y + 530, x + 325, y + 590);
+  triangle(x + 320, y + 505, x + 280, y + 505, x + 300, y + 570);
+  //yellow part
+  fill(255, 200, 90);
+  ellipse(x + 325, y + 500, 60);
+  triangle(x + 355, y + 500, x + 335, y + 510, x + 353, y + 550);
+  triangle(x + 295, y + 500, x + 315, y + 510, x + 300, y + 550);
+  triangle(x + 350, y + 500, x + 300, y + 510, x + 325, y + 570);
+
+  pop();
+}
+
+function drawFuel(offsetX = 0) {
+  let x = offsetX;
+  let y = -165;
+  //fuel
+  push();
+  strokeWeight(0);
+  fill(255, 255, 255);
+  rect(510, 50, x + 20, 15);
+  pop();
+}
+
 const MASS = 6.5;
 const GRAVITY = 9.81;
 const WEIGHT = MASS * GRAVITY;
@@ -172,6 +204,8 @@ let mountainsX = 0;
 let shipPosition = 0;
 let shipVelocity = 0;
 let previousTime = 0;
+let isThrusting = false;
+let fuel = 100;
 
 function updateShip() {
   // (A bit of research with ChatGPT about velocity)
@@ -182,8 +216,14 @@ function updateShip() {
   previousTime = currentTime;
 
   // Thrust the ship up
-  if (keyIsDown(UP_ARROW)) {
+  if (keyIsDown(UP_ARROW) && fuel > -20) {
     shipVelocity -= THRUST_FORCE * deltaTime;
+    isThrusting = true;
+    if (fuel > -20) {
+      fuel -= 0.8;
+    }
+  } else {
+    isThrusting = false;
   }
 
   // Apply the force from the gravity
@@ -219,7 +259,11 @@ function draw() {
   }
   // draw the scenery and ship
   drawPlanets(planetsY);
-  drawShip(shipPosition);
   drawGround();
+  if (isThrusting) {
+    drawFire(shipPosition);
+  }
+  drawShip(shipPosition);
   drawMountains(mountainsX);
+  drawFuel((offsetX = fuel));
 }
