@@ -1,4 +1,4 @@
-function drawShip(offsetY = 0) {
+function drawShip(offsetY) {
   let x = 225;
   let y = offsetY - 165;
 
@@ -139,7 +139,7 @@ function drawMountains(offsetX) {
   pop();
 }
 
-function drawPlanets(offsetY = 0) {
+function drawPlanets(offsetY) {
   let x = 0;
   let y = offsetY - 165;
   //moon
@@ -159,7 +159,7 @@ function drawPlanets(offsetY = 0) {
   pop();
 }
 
-function drawFire(offsetY = 0) {
+function drawFire(offsetY) {
   let x = 0;
   let y = offsetY - 165;
   //fire
@@ -180,14 +180,14 @@ function drawFire(offsetY = 0) {
   pop();
 }
 
-function drawFuel(offsetX = 0) {
-  let x = offsetX;
-  let y = -165;
-  //fuel
+function drawFuel(offsetX) {
+  let x = 20 + offsetX;
+  //fuelbar
   push();
-  strokeWeight(0);
-  fill(255, 255, 255);
-  rect(510, 50, x + 20, 15);
+  strokeWeight(8);
+  stroke(255, 150, 90);
+  fill(255, 200, 90);
+  rect(515, 55, x - 20, 15);
   pop();
 }
 
@@ -198,16 +198,26 @@ const ACCELERATION = 10;
 const FORCE = WEIGHT * ACCELERATION;
 const THRUST_FORCE = 1000;
 
+const STATUS_TITLE_START = "PLAY";
+const STATUS_SUBTITLE_START = "Press SPACE to start\nHold UP to thrust";
+const STATUS_TITLE_GAME_OVER = "GAME OVER";
+const STATUS_SUBTITLE_GAME_OVER = "Press SPACE to restart";
+const STATUS_TITLE_WON = "YOU WON";
+const STATUS_SUBTITLE_WON = "Press SPACE to play again";
+
 let planetsY = 0;
 let mountainsX = 0;
 
 let shipPosition = 0;
 let shipVelocity = 0;
 let previousTime = 0;
-let isThrusting = false;
+let isShipFrozen = true;
+let isGameOver = false;
+let statusTitle = STATUS_TITLE_START;
+let statusSubtitle = STATUS_SUBTITLE_START;
 let fuel = 100;
 
-function updateShip() {
+function doShipGravity() {
   // (A bit of research with ChatGPT about velocity)
 
   // Calculate the time since the last update
@@ -216,14 +226,11 @@ function updateShip() {
   previousTime = currentTime;
 
   // Thrust the ship up
-  if (keyIsDown(UP_ARROW) && fuel > -20) {
+  if (keyIsDown(UP_ARROW) && fuel > 0) {
     shipVelocity -= THRUST_FORCE * deltaTime;
-    isThrusting = true;
-    if (fuel > -20) {
-      fuel -= 0.8;
+    if (fuel > 0) {
+      fuel -= 1;
     }
-  } else {
-    isThrusting = false;
   }
 
   // Apply the force from the gravity
@@ -231,39 +238,116 @@ function updateShip() {
   shipPosition += shipVelocity * deltaTime;
 }
 
-// Reset the ship's velocity and previous time
-function gameOver() {
-  shipPosition = 585;
+function triggerStartGame() {
+  // Prepare the ship for a new game
+  shipPosition = 0;
   shipVelocity = 0;
+  // Reset the timer
   previousTime = millis();
+  fuel = 100;
+
+  isGameOver = false;
+
+  if (keyIsDown(32)) {
+    isShipFrozen = false;
+  }
+
+  // Game start text
+  statusTitle = STATUS_TITLE_START;
+  statusSubtitle = STATUS_SUBTITLE_START;
 }
 
-// canvas and framerate
+function triggerGameWon() {
+  isGameOver = true;
+  isShipFrozen = true;
+
+  if (keyIsDown(32)) {
+    setTimeout(() => {
+      triggerStartGame();
+    }, 100);
+  }
+
+  // Game won text
+  statusTitle = STATUS_TITLE_WON;
+  statusSubtitle = STATUS_SUBTITLE_WON;
+}
+
+function triggerGameOver() {
+  isGameOver = true;
+  isShipFrozen = true;
+
+  if (keyIsDown(32)) {
+    setTimeout(() => {
+      triggerStartGame();
+    }, 100);
+  }
+
+  // Game over text
+  statusTitle = STATUS_TITLE_GAME_OVER;
+  statusSubtitle = STATUS_SUBTITLE_GAME_OVER;
+}
+
+function drawText(textContent, x, y, size, color) {
+  push();
+  fill(...color);
+  textSize(size);
+  textAlign(CENTER);
+  text(textContent, x, y);
+  pop();
+}
+
+function drawStatusMessage() {
+  drawText(statusTitle, 325, 350, 50, [255, 150, 255]);
+  drawText(statusSubtitle, 325, 385, 20, [200, 150, 255]);
+}
+
+// Canvas and framerate
 function setup() {
-  createCanvas(650, 950);
+  let canvas = createCanvas(650, 950);
+  window.addEventListener("resize", () => {
+    canvas.position((windowWidth - width) / 2, 0);
+  });
+  canvas.position((windowWidth - width) / 2, 0);
   frameRate(60);
 }
 
-// Render the ship
+// Render the game
 function draw() {
   background(0, 0, 30);
-  // Update the ship's position and velocity
-  updateShip();
 
-  // Update the scenery based on the ship's velocity and reset if the ship has reached the ground
-  if (shipPosition < 585) {
+  if (!isGameOver && isShipFrozen && keyIsDown(32)) {
+    triggerStartGame();
+  }
+
+  // Update the ship's position and velocity
+  if (!isGameOver && !isShipFrozen) doShipGravity();
+
+  // Update the scenery based on the ship's velocity and trigger game over if the ship has reached the ground
+  if (shipPosition <= 585 && !isGameOver) {
     mountainsX = shipPosition / 6;
     planetsY = shipPosition / -3;
+    // If the ship is too fast when colliding with the ground, trigger game over
+  } else if (shipVelocity > 180) {
+    triggerGameOver();
   } else {
-    gameOver();
+    triggerGameWon();
   }
+
   // draw the scenery and ship
   drawPlanets(planetsY);
   drawGround();
-  if (isThrusting) {
+  if (keyIsDown(UP_ARROW) && fuel > 0 && !isGameOver && !isShipFrozen) {
     drawFire(shipPosition);
   }
   drawShip(shipPosition);
   drawMountains(mountainsX);
-  drawFuel((offsetX = fuel));
+  drawFuel(fuel);
+
+  // Draw the fuel text
+  fill(255, 255, 255);
+  textSize(25);
+  text("Fuel", 510, 40);
+
+  // Draw the status message
+  if (isGameOver || isShipFrozen) drawStatusMessage();
 }
